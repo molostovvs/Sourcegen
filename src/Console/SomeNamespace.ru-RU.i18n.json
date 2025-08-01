@@ -1,0 +1,4 @@
+{
+  "SomeNamespace:AmazingKey": "Простое значение, просто для веселья.",
+  "SomeNamespace:ComplexKey": "Привет, ${ Name }! Ваш баланс ${ Balance }, поэтому мы не можем продать вам наши товары, потому что ${ Reason }."
+}
