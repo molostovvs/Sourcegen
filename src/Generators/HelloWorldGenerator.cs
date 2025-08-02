@@ -14,14 +14,14 @@ public class HelloWorldGenerator : IIncrementalGenerator
         context.RegisterPostInitializationOutput(static postInitializationContext =>
         {
             postInitializationContext.AddEmbeddedAttributeDefinition();
-            postInitializationContext.AddSource("myGeneratedFile.cs", SourceText.From("""
+            postInitializationContext.AddSource("HelloWorldAttribute.g.cs", SourceText.From("""
                 using System;
                 using Microsoft.CodeAnalysis;
 
-                namespace GeneratedNamespace
+                namespace Generators.Attributes
                 {
-                    [AttributeUsage(AttributeTargets.Method), Embedded]
-                    internal sealed class GeneratedAttribute : Attribute
+                    [AttributeUsage(AttributeTargets.Class), Embedded]
+                    internal sealed class GenerateHelloWorldAttribute : Attribute
                     {
                     }
                 }
@@ -29,39 +29,32 @@ public class HelloWorldGenerator : IIncrementalGenerator
         });
 
         var pipeline = context.SyntaxProvider.ForAttributeWithMetadataName(
-            fullyQualifiedMetadataName: "GeneratedNamespace.GeneratedAttribute",
-            predicate: static (syntaxNode, cancellationToken) => syntaxNode is BaseMethodDeclarationSyntax,
+            fullyQualifiedMetadataName: "Generators.Attributes.GenerateHelloWorldAttribute",
+            predicate: static (syntaxNode, cancellationToken) => syntaxNode is ClassDeclarationSyntax,
             transform: static (context, cancellationToken) =>
             {
-                var containingClass = context.TargetSymbol.ContainingType;
-                return new Model(
-                    containingClass.ContainingNamespace?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Omitted)) ?? "",
-                    containingClass.Name,
-                    context.TargetSymbol.Name);
+                var classSymbol = (INamedTypeSymbol)context.TargetSymbol;
+                return new HelloWorldModel(
+                    classSymbol.ContainingNamespace?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Omitted)) ?? "",
+                    classSymbol.Name);
             }
         );
 
         context.RegisterSourceOutput(pipeline, static (context, model) =>
-            {
-                var sourceText = SourceText.From($$"""
+        {
+            var sourceText = SourceText.From($$"""
+                using System;
                 {{(string.IsNullOrEmpty(model.Namespace) ? "" : $"namespace {model.Namespace};")}}
+
                 partial class {{model.ClassName}}
                 {
-                    public partial void {{model.MethodName}}()
-                    {
-                        System.Console.WriteLine("Generated implementation for {{model.MethodName}}!");
-                    }
+                    public void HelloWorld() => Console.WriteLine("Hello, class!");
                 }
                 """, Encoding.UTF8);
 
-                context.AddSource($"{model.ClassName}_{model.MethodName}.g.cs", sourceText);
-            });
+            context.AddSource($"{model.ClassName}.HelloWorld.g.cs", sourceText);
+        });
     }
 
-    private class Model(string @namespace, string className, string methodName)
-    {
-        public string Namespace => @namespace;
-        public string ClassName => className;
-        public string MethodName => methodName;
-    };
+    private record HelloWorldModel(string Namespace, string ClassName);
 }
